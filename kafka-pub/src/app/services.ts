@@ -1,4 +1,4 @@
-import { HealthService } from "@/services";
+import { HealthService, TaskService } from "@/services";
 import type { Provider } from "@nestjs/common";
 
-export const Services: Provider[] = [HealthService];
+export const Services: Provider[] = [HealthService, TaskService];

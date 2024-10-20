@@ -5,3 +5,5 @@
 - [X] Create MessageBrokerTopicEnum
 - [X] Create TaskRepositoryPort
 - [X] Impl TaskRepository with MessageBrokerHelper
+- [X] Create TaskService, add createTask method
+- [X] Create TaskController and expose create task api
