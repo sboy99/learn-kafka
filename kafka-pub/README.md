@@ -1,1 +1,1 @@
-# Hexagonal Architecture Boilerplate
+# Kafka Publisher

@@ -26,6 +26,9 @@ dependencies:
   helmet:
     specifier: ^8.0.0
     version: 8.0.0
+  kafkajs:
+    specifier: ^2.2.4
+    version: 2.2.4
   reflect-metadata:
     specifier: ^0.1.13
     version: 0.1.14
@@ -3372,6 +3375,11 @@ packages:
     optionalDependencies:
       graceful-fs: 4.2.11
     dev: true
+
+  /kafkajs@2.2.4:
+    resolution: {integrity: sha512-j/YeapB1vfPT2iOIUn/vxdyKEuhuY2PxMBvf5JWux6iSaukAccrMtXEY/Lb7OvavDhOWME589bpLrEdnVHjfjA==}
+    engines: {node: '>=14.0.0'}
+    dev: false
 
   /kleur@3.0.3:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
