@@ -3,5 +3,5 @@
 - [X] Install Kafkajs npm lib 
 - [X] Create MessageBrokerHelper (Kafka)
 - [X] Create MessageBrokerTopicEnum
-- [] Create TaskRepositoryPort
-- [] Impl TaskRepository with MessageBrokerHelper
+- [X] Create TaskRepositoryPort
+- [X] Impl TaskRepository with MessageBrokerHelper

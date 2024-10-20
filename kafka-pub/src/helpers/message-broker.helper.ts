@@ -15,6 +15,7 @@ import {
 	Kafka,
 	type KafkaConfig,
 	type Message,
+	Partitioners,
 	type Producer,
 	type ProducerConfig,
 } from "kafkajs";
@@ -46,11 +47,14 @@ export class MessageBrokerHelper implements OnModuleInit, OnModuleDestroy {
 
 	// -------------------------------PUBLIC--------------------------------- //
 
-	public async createTopic(topic: MessageBrokerTopicEnum): Promise<void> {
-		const topics = await this.listTopics();
-		if (topics.includes(topic)) return;
+	public async createTopics(topics: MessageBrokerTopicEnum[]): Promise<void> {
+		const existingTopics = await this.listTopics();
+		const newTopics = topics.filter((topic) => !existingTopics.includes(topic));
+		if (newTopics.length === 0) return;
 		await this._admin.createTopics({
-			topics: [{ topic }],
+			topics: newTopics.map((topic) => ({
+				topic,
+			})),
 		});
 	}
 
@@ -59,7 +63,7 @@ export class MessageBrokerHelper implements OnModuleInit, OnModuleDestroy {
 		return topics as MessageBrokerTopicEnum[];
 	}
 
-	public async sendMessage(
+	public async publishMessage(
 		topic: MessageBrokerTopicEnum,
 		message: Message,
 	): Promise<void> {
@@ -83,7 +87,7 @@ export class MessageBrokerHelper implements OnModuleInit, OnModuleDestroy {
 
 	private get _producerConfig(): ProducerConfig {
 		return {
-			idempotent: true,
+			createPartitioner: Partitioners.LegacyPartitioner,
 		};
 	}
 
