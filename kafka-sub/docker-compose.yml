@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-pg}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - pg_network
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@pgadmin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-pgadmin}
+      PGADMIN_CONFIG_SERVER_MODE: "True" # Enforce secure access in production
+    ports:
+      - "5050:80" # Exposing pgAdmin on port 5050
+    depends_on:
+      - postgres
+    networks:
+      - pg_network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: pgbouncer
+    restart: always
+    environment:
+      - DB_USER=${POSTGRES_USER:-postgres}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - DB_HOST=postgres_db
+      - DB_PORT=5432
+      - MAX_CLIENT_CONN=100  # Maximum number of client connections
+      - DEFAULT_POOL_SIZE=20  # Size of the connection pool
+      - LISTEN_PORT=6543  # PgBouncer port for incoming connections
+    networks:
+      - pg_network
+    ports:
+      - "6543:6543"  # Exposing the PgBouncer pooling port
+    depends_on:
+      - postgres
+    volumes:
+      - pgbouncer_config:/etc/pgbouncer
+
+volumes:
+  pgdata:
+    driver: local # Ensures PostgreSQL data persists across container restarts
+  pgadmin_data:
+    driver: local # Persists pgAdmin settings (e.g., server connections)
+  pgbouncer_config:
+    driver: local # Persists PgBouncer configuration
+
+networks:
+  pg_network:
+    driver: bridge # Isolates the PostgreSQL and pgAdmin services from other services
