@@ -1,8 +1,17 @@
+import { HandleException } from "@/app/decorators";
 import type { TConfig } from "@/app/modules/config";
 import type { MessageBrokerTopicEnum } from "@/domain/enums";
-import { Inject, Injectable } from "@nestjs/common";
+import {
+	Inject,
+	Injectable,
+	Logger,
+	type OnModuleDestroy,
+	type OnModuleInit,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
+	type Admin,
+	type AdminConfig,
 	Kafka,
 	type KafkaConfig,
 	type Message,
@@ -11,21 +20,46 @@ import {
 } from "kafkajs";
 
 @Injectable()
-export class MessageBrokerHelper {
+export class MessageBrokerHelper implements OnModuleInit, OnModuleDestroy {
+	private readonly _logger: Logger;
 	private readonly _broker: Kafka;
 	private readonly _producer: Producer;
+	private readonly _admin: Admin;
 
 	constructor(
 		@Inject(ConfigService)
 		private readonly _configService: ConfigService<TConfig>,
 	) {
+		this._logger = new Logger(MessageBrokerHelper.name);
 		this._broker = new Kafka(this._brokerConfig);
 		this._producer = this._broker.producer(this._producerConfig);
+		this._admin = this._broker.admin(this._adminConfig);
+	}
+
+	async onModuleInit(): Promise<void> {
+		await this._connect();
+	}
+
+	async onModuleDestroy(): Promise<void> {
+		await this._disconnect();
 	}
 
 	// -------------------------------PUBLIC--------------------------------- //
 
-	public async send(
+	public async createTopic(topic: MessageBrokerTopicEnum): Promise<void> {
+		const topics = await this.listTopics();
+		if (topics.includes(topic)) return;
+		await this._admin.createTopics({
+			topics: [{ topic }],
+		});
+	}
+
+	public async listTopics(): Promise<MessageBrokerTopicEnum[]> {
+		const topics = await this._admin.listTopics();
+		return topics as MessageBrokerTopicEnum[];
+	}
+
+	public async sendMessage(
 		topic: MessageBrokerTopicEnum,
 		message: Message,
 	): Promise<void> {
@@ -51,5 +85,29 @@ export class MessageBrokerHelper {
 		return {
 			idempotent: true,
 		};
+	}
+
+	private get _adminConfig(): AdminConfig {
+		return {
+			retry: {
+				initialRetryTime: 100,
+				maxRetryTime: 1000,
+				retries: 5,
+			},
+		};
+	}
+
+	@HandleException(true)
+	private async _connect(): Promise<void> {
+		await this._producer.connect();
+		await this._admin.connect();
+		this._logger.log("Connected to Kafka");
+	}
+
+	@HandleException()
+	private async _disconnect(): Promise<void> {
+		await this._producer.disconnect();
+		await this._admin.disconnect();
+		this._logger.log("Disconnected from Kafka");
 	}
 }
