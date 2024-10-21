@@ -3,7 +3,7 @@ import http from "k6/http";
 
 // Configuration
 const url = "http://localhost:3000/tasks"; // Replace with your task creation endpoint
-const targetRequestsPerSecond = 1000;
+const targetRequestsPerSecond = 3000;
 
 // Load test scenario
 export const options = {

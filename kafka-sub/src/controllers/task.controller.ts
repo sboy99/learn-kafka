@@ -2,6 +2,7 @@ import type { TaskControllerPort } from "@/controllers/ports";
 import { TaskService } from "@/services";
 import { Controller, Inject, type OnModuleInit } from "@nestjs/common";
 
+import { KafkaConsumer } from "@/app/decorators";
 import { MessageBrokerTopicEnum } from "@/domain/enums";
 import { MessageBrokerHelper } from "@/helpers";
 import type { TCreateTaskDto } from "./dtos";
