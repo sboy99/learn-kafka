@@ -33,6 +33,7 @@
     "compression": "^1.7.4",
     "drizzle-orm": "^0.35.2",
     "helmet": "^8.0.0",
+    "kafkajs": "^2.2.4",
     "pg": "^8.13.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",

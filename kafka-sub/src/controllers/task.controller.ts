@@ -1,19 +1,50 @@
 import type { TaskControllerPort } from "@/controllers/ports";
 import { TaskService } from "@/services";
-import { Body, Controller, Inject, Post } from "@nestjs/common";
+import { Controller, Inject, type OnModuleInit } from "@nestjs/common";
+
+import { MessageBrokerTopicEnum } from "@/domain/enums";
+import { MessageBrokerHelper } from "@/helpers";
 import type { TCreateTaskDto } from "./dtos";
 import { CreateTaskTransformer } from "./transformers";
 
-@Controller("tasks")
-export class TaskController implements TaskControllerPort {
+@Controller()
+export class TaskController implements TaskControllerPort, OnModuleInit {
 	constructor(
-		@Inject(TaskService) private readonly _taskService: TaskService,
+		@Inject(MessageBrokerHelper)
+		private readonly _messageBrokerHelper: MessageBrokerHelper,
+		@Inject(TaskService)
+		private readonly _taskService: TaskService,
 	) {}
 
-	@Post()
-	public async create(@Body() dto: TCreateTaskDto): Promise<void> {
-		const { userId, title, description } =
-			await CreateTaskTransformer.parseAsync(dto);
-		await this._taskService.createTask(userId, title, description);
+	async onModuleInit(): Promise<void> {
+		await this._addConsumers();
+	}
+
+	// -------------------------------PUBLIC--------------------------------- //
+
+	public async createTask(dto: TCreateTaskDto): Promise<void> {
+		const { title, description } = await CreateTaskTransformer.parseAsync(dto);
+		await this._taskService.createTask(title, description);
+	}
+
+	// -------------------------------PRIVATE-------------------------------- //
+
+	private async _addConsumers(): Promise<void> {
+		await Promise.all([this._addTaskCreatedConsumer()]);
+	}
+
+	private async _addTaskCreatedConsumer(): Promise<void> {
+		await this._messageBrokerHelper.consume(
+			MessageBrokerTopicEnum.TASK_CREATED,
+			{
+				eachMessage: async ({ message }) => {
+					if (!message.value) {
+						return;
+					}
+					const taskDto = JSON.parse(message.value.toString());
+					await this.createTask(taskDto);
+				},
+			},
+		);
 	}
 }

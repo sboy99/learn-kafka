@@ -24,7 +24,14 @@ export const PostgresConfigSchema = z.object({
 	POSTGRES_PORT: _port,
 });
 
-export const ConfigSchema =
-	AppConfigSchema.and(NodeConfigSchema).and(PostgresConfigSchema);
+export const KafkaConfigSchema = z.object({
+	KAFKA_CLIENT_ID: _str,
+	KAFKA_BROKER: _str,
+	KAFKA_GROUP_ID: _str,
+});
+
+export const ConfigSchema = AppConfigSchema.and(NodeConfigSchema)
+	.and(PostgresConfigSchema)
+	.and(KafkaConfigSchema);
 
 export type TConfig = z.infer<typeof ConfigSchema>;

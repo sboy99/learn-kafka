@@ -19,16 +19,11 @@ export class TaskService {
 
 	// -------------------------------PUBLIC--------------------------------- //
 
-	public async createTask(
-		userId: string,
-		title: string,
-		description?: string,
-	): Promise<void> {
+	public async createTask(title: string, description?: string): Promise<void> {
 		const newTask = new Task({
 			title,
 			description: description ?? null,
 			status: "pending",
-			createdBy: userId,
 		});
 		this._createTaskRequestsList.push(newTask);
 

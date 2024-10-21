@@ -1,4 +1,4 @@
-import { DbHelper } from "@/helpers";
+import { DbHelper, MessageBrokerHelper } from "@/helpers";
 import type { Provider } from "@nestjs/common";
 
-export const Helpers: Provider[] = [DbHelper];
+export const Helpers: Provider[] = [DbHelper, MessageBrokerHelper];
