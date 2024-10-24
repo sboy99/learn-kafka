@@ -1,11 +1,10 @@
-import { TASK_REPOSITORY } from "@/app/constants/tokens";
-import { TaskRepository } from "@/repositories";
+import { DbAdapter } from "@/adapters";
+import { DB_ADAPTER } from "@/app/constants/tokens";
 import type { Provider } from "@nestjs/common";
 
 export const Adapters: Provider[] = [
-	// repositories //
 	{
-		provide: TASK_REPOSITORY,
-		useClass: TaskRepository,
+		provide: DB_ADAPTER,
+		useClass: DbAdapter,
 	},
 ];

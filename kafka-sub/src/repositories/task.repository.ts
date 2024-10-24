@@ -1,15 +1,17 @@
+import type { DbAdapter } from "@/adapters";
+import { DB_ADAPTER } from "@/app/constants/tokens";
 import type { Task } from "@/domain/entities";
-import { DbHelper } from "@/helpers";
 import type { TaskRepositoryPort } from "@/repositories/ports";
-import { tasks as tasksTable } from "@db/schema";
 import { Inject, Injectable } from "@nestjs/common";
 
 @Injectable()
 export class TaskRepository implements TaskRepositoryPort {
-	constructor(@Inject(DbHelper) private readonly _pgHelper: DbHelper) {}
+	constructor(
+		@Inject(DB_ADAPTER) private readonly _dbAdapter: DbAdapter<"TASKS">,
+	) {}
 
 	public async createTasks(tasks: Task[]): Promise<void> {
-		await this._pgHelper.db.insert(tasksTable).values(tasks);
+		await this._dbAdapter.insertMany("TASKS", tasks);
 	}
 
 	getTasks(): Promise<Task[]> {
