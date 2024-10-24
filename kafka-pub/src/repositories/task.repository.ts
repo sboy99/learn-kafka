@@ -1,32 +1,28 @@
+import type { EventPort } from "@/adapters/ports";
+import { EVENT_ADAPTER } from "@/app/constants/tokens";
 import type { Task } from "@/domain/entities";
-import { MessageBrokerTopicEnum } from "@/domain/enums";
-import { MessageBrokerHelper } from "@/helpers";
+import { EventEnum } from "@/domain/enums";
 import { Inject, Injectable, type OnModuleInit } from "@nestjs/common";
 import type { TaskRepositoryPort } from "./ports";
 
 @Injectable()
 export class TaskRepository implements TaskRepositoryPort, OnModuleInit {
-	private readonly _taskTopics: MessageBrokerTopicEnum[];
+	private readonly _taskTopics: EventEnum[];
 
 	constructor(
-		@Inject(MessageBrokerHelper)
-		private readonly _messageBrokerHelper: MessageBrokerHelper,
+		@Inject(EVENT_ADAPTER)
+		private readonly _eventAdapter: EventPort<Task>,
 	) {
-		this._taskTopics = [MessageBrokerTopicEnum.TASK_CREATED];
+		this._taskTopics = [EventEnum.TASK_CREATED];
 	}
 
 	async onModuleInit(): Promise<void> {
-		await this._messageBrokerHelper.createTopics(this._taskTopics);
+		await this._eventAdapter.onCreate(this._taskTopics);
 	}
 
 	// -------------------------------PUBLIC--------------------------------- //
 
 	public async createTask(task: Task): Promise<void> {
-		await this._messageBrokerHelper.publishMessage(
-			MessageBrokerTopicEnum.TASK_CREATED,
-			{
-				value: JSON.stringify(task),
-			},
-		);
+		await this._eventAdapter.publish(EventEnum.TASK_CREATED, task);
 	}
 }

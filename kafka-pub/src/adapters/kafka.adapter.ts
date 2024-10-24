@@ -1,11 +1,11 @@
 import { HandleException } from "@/app/decorators";
 import type { TConfig } from "@/app/modules/config";
-import type { MessageBrokerTopicEnum } from "@/domain/enums";
+import { EventEnum } from "@/domain/enums";
 import {
 	Inject,
 	Injectable,
 	Logger,
-	type OnModuleDestroy,
+	type OnApplicationShutdown,
 	type OnModuleInit,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -14,14 +14,17 @@ import {
 	type AdminConfig,
 	Kafka,
 	type KafkaConfig,
-	type Message,
 	Partitioners,
 	type Producer,
 	type ProducerConfig,
 } from "kafkajs";
+import { z } from "zod";
+import type { EventPort } from "./ports";
 
 @Injectable()
-export class MessageBrokerHelper implements OnModuleInit, OnModuleDestroy {
+export class KafkaAdapter<T = unknown>
+	implements EventPort<T>, OnModuleInit, OnApplicationShutdown
+{
 	private readonly _logger: Logger;
 	private readonly _broker: Kafka;
 	private readonly _producer: Producer;
@@ -31,7 +34,7 @@ export class MessageBrokerHelper implements OnModuleInit, OnModuleDestroy {
 		@Inject(ConfigService)
 		private readonly _configService: ConfigService<TConfig>,
 	) {
-		this._logger = new Logger(MessageBrokerHelper.name);
+		this._logger = new Logger(KafkaAdapter.name);
 		this._broker = new Kafka(this._brokerConfig);
 		this._producer = this._broker.producer(this._producerConfig);
 		this._admin = this._broker.admin(this._adminConfig);
@@ -41,35 +44,28 @@ export class MessageBrokerHelper implements OnModuleInit, OnModuleDestroy {
 		await this._connect();
 	}
 
-	async onModuleDestroy(): Promise<void> {
+	async onApplicationShutdown(): Promise<void> {
 		await this._disconnect();
 	}
 
 	// -------------------------------PUBLIC--------------------------------- //
 
-	public async createTopics(topics: MessageBrokerTopicEnum[]): Promise<void> {
-		const existingTopics = await this.listTopics();
-		const newTopics = topics.filter((topic) => !existingTopics.includes(topic));
-		if (newTopics.length === 0) return;
-		await this._admin.createTopics({
-			topics: newTopics.map((topic) => ({
-				topic,
-			})),
-		});
+	public async onCreate(...args: unknown[]): Promise<void> {
+		const topics = args?.[0];
+		this.assetTopics(topics);
+		await this.createTopics(topics);
 	}
 
-	public async listTopics(): Promise<MessageBrokerTopicEnum[]> {
-		const topics = await this._admin.listTopics();
-		return topics as MessageBrokerTopicEnum[];
-	}
-
-	public async publishMessage(
-		topic: MessageBrokerTopicEnum,
-		message: Message,
-	): Promise<void> {
+	public async publish(topic: EventEnum, message: T): Promise<void> {
+		const serializedMessage = this.serializeMessage(message);
+		// TODO: Do partioning here if needed
 		await this._producer.send({
 			topic,
-			messages: [message],
+			messages: [
+				{
+					value: serializedMessage,
+				},
+			],
 		});
 	}
 
@@ -113,5 +109,36 @@ export class MessageBrokerHelper implements OnModuleInit, OnModuleDestroy {
 		await this._producer.disconnect();
 		await this._admin.disconnect();
 		this._logger.log("Disconnected from Kafka");
+	}
+
+	private async listTopics(): Promise<EventEnum[]> {
+		const topics = await this._admin.listTopics();
+		return topics as EventEnum[];
+	}
+
+	private async createTopics(topics: EventEnum[]): Promise<void> {
+		const existingTopics = await this.listTopics();
+		const newTopics = topics.filter((topic) => !existingTopics.includes(topic));
+		if (newTopics.length === 0) return;
+		await this._admin.createTopics({
+			topics: newTopics.map((topic) => ({
+				topic,
+			})),
+		});
+	}
+
+	private assetTopics(topics: unknown): asserts topics is EventEnum[] {
+		const validationSchema = z.nativeEnum(EventEnum).array();
+		if (validationSchema.safeParse(topics).success) return;
+		this._logger.error("Invalid topics", topics);
+		throw new Error("Invalid topics");
+	}
+
+	private serializeMessage<T = unknown>(message: T): string {
+		return JSON.stringify(message);
+	}
+
+	private deserializeMessage<T = unknown>(message: string): T {
+		return JSON.parse(message);
 	}
 }
